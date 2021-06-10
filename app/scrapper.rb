@@ -1,9 +1,9 @@
 class ScrapperService
   # PREFIX = 'https://www.pagesjaunes.fr/annuaire/chercherlespros'.freeze
 
-  def call(attributes = { start: 0 })
-    @url = "https://www.pagesjaunes.fr/annuaire/chercherlespros?quoiqui=agence%20interim%20btp&ou=Loire-Atlantique%20%2844%29&idOu=D044&page=3&contexte=SZYmn5mkbDwBxawUHB0Su3eKL16bkxx3e0d5jKAkSaA%3D&proximite=0&quoiQuiInterprete=agence%20interim%20btp"
-
+  def call(attributes = { start: 0, search: "interim", dept: "D044" })
+    @url = "https://www.pagesjaunes.fr/annuaire/chercherlespros?quoiqui=#{attributes[:search]}&idOu=#{attributes[:dept]}&page=#{attributes[:start]}&proximite=0"
+    pp @url
     store_locally
 
     html_file = File.open('data/document.html')
@@ -11,23 +11,25 @@ class ScrapperService
 
     agencies = []
     html_doc.search('li.bi-bloc.blocs.clearfix.bi-pro').each do |result|
+      print "****************** \n*     new entry    *\n*****************"
       @agency = {}
       business_name_raw     = result.search('.row-denom') # Business name
       address_raw           = result.search('.main-adresse-container.row-adresse.with-adresse.with-horaire-chaudes') # Address
       tags_raw              = result.search('.activites-mentions') # tags
       activities_raw        = result.search('.zone-cvi-cviv') # activities
       keywords_raw          = result.search('.zone-mots-cles.with-cris') # keywords
-      website_raw           = result.search('li.bi-site-internet a')
+      # website_raw           = result.search('li.bi-site-internet a')
+      website_raw           = result.search('footer')
 
+      @agency[:departement] = attributes[:dept][-3..]
       pp parse_business_name(business_name_raw)
-      pp parse_address(address_raw)
-      pp parse_tags(tags_raw)
-      pp parse_activities_raw(activities_raw)
-      pp parse_keywords_raw(keywords_raw)
-      pp parse_website_raw(website_raw)
+      parse_address(address_raw)
+      parse_tags(tags_raw)
+      parse_activities_raw(activities_raw)
+      parse_keywords_raw(keywords_raw)
+      parse_website_raw(website_raw)
       # pp "website_raw", website_raw
       agencies << @agency
-      break
 
     end
     agencies
@@ -37,8 +39,8 @@ class ScrapperService
 
   def store_locally
     # store_in_file
-    unless File.file?('data/document.html') # tries to get page locally
-    # unless false # forces to get page from the web
+    # unless File.file?('data/document.html') # tries to get page locally
+    unless false # forces to get page from the web
       html_file = URI.parse(@url).open.read
       html_doc  = Nokogiri::HTML(html_file)
       File.write('data/document.html', html_doc.search('#listResults'))
@@ -51,7 +53,7 @@ class ScrapperService
 
   def parse_address(address_raw)
     a = address_raw.css(".adresse.pj-lb.pj-link")
-    a.at("span").children.remove # we don't need this span's content
+    a.at("span").children.remove unless a.at("span").nil? # we don't need this span's content
     @agency[:address] = a.text.strip.gsub(/\n/," ")
   end
 
@@ -68,8 +70,19 @@ class ScrapperService
   end
 
   def parse_website_raw(website_raw)
-    pp website_raw
-    website_raw.css(".pj-lb.pj-link").last.text
+    # the data can appear in different way. Path2 data is hidden with JS so we can't get it for now
+    path1 = "li.bi-site-internet a.pj-lb.pj-link"
+    path2 = "li.item.hidden-phone.site-internet.SEL-internet a.pj-link"
+
+    if website_raw.css(path1).last # last because other lines are Facebook and such
+      data = website_raw.css(path1).last
+      @agency[:website] = data.text
+    elsif website_raw.css(path2)[0] # 0 because next items are noise
+      data = website_raw.css(path2)[0]['href']
+      @agency[:website] = data
+    else
+      @agency[:website] = "NC"
+    end
   end
 
 end

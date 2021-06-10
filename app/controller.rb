@@ -1,15 +1,18 @@
 class Controller
   def import_from_web
-    page = 0
     all_agencies = []
     scrapper = ScrapperService.new
-    all_agencies += scrapper.call
-    # loop do
-    #   attributes = { start: page * 10 }
-    #   page += 1
-    #   agencies = scrapper.call(attributes)
-    #   agencies.last == all_agencies.last ? break : all_agencies += agencies
-    # end
+    ["D044", "D059", "D013", "D067"].each do |dept|
+      page = 1
+      loop do
+        attributes = { start: page, search: "agence interim btp", dept: dept }
+        scraped = scrapper.call(attributes)
+        pp scraped.count
+        scraped.count > 0 ? all_agencies += scraped : break
+        page += 1
+        page >= 30 ? break : 1 == 1
+      end
+    end
     save_csv(all_agencies)
   end
 
