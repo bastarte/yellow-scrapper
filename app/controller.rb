@@ -1,16 +1,20 @@
 class Controller
+  # DEPARTEMENTS = %w[D044 D059 D013 D067].freeze
+  DEPARTEMENTS = %w[D059].freeze
+  SEARCH = 'agence interim btp'.freeze
+
   def import_from_web
     all_agencies = []
     scrapper = ScrapperService.new
-    ["D044", "D059", "D013", "D067"].each do |dept|
+    DEPARTEMENTS.each do |dept|
       page = 1
       loop do
-        attributes = { start: page, search: "agence interim btp", dept: dept }
-        scraped = scrapper.call(attributes)
-        pp scraped.count
-        scraped.count > 0 ? all_agencies += scraped : break
+        attributes = { start: page, search: SEARCH, dept: dept }
+        scrapped_agencies = scrapper.call(attributes)
+        pp scrapped_agencies.count
+        scrapped_agencies.count > 0 ? all_agencies += scrapped_agencies : break
         page += 1
-        page >= 30 ? break : 1 == 1
+        page >= 30 ? break : 1 == 1 # arbitrary limit of pages. Can be increased if makes business sense
       end
     end
     save_csv(all_agencies)

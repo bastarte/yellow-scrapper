@@ -11,7 +11,7 @@ class ScrapperService
 
     agencies = []
     html_doc.search('li.bi-bloc.blocs.clearfix.bi-pro').each do |result|
-      print "****************** \n*     new entry    *\n*****************"
+      print "*     new entry    : "
       @agency = {}
       business_name_raw     = result.search('.row-denom') # Business name
       address_raw           = result.search('.main-adresse-container.row-adresse.with-adresse.with-horaire-chaudes') # Address
@@ -21,14 +21,14 @@ class ScrapperService
       # website_raw           = result.search('li.bi-site-internet a')
       website_raw           = result.search('footer')
 
-      @agency[:departement] = attributes[:dept][-3..]
+      @agency[:search] = attributes[:search]
+      @agency[:departement] = attributes[:dept][-3..-1]
       pp parse_business_name(business_name_raw)
       parse_address(address_raw)
       parse_tags(tags_raw)
       parse_activities_raw(activities_raw)
       parse_keywords_raw(keywords_raw)
       parse_website_raw(website_raw)
-      # pp "website_raw", website_raw
       agencies << @agency
 
     end
@@ -54,7 +54,7 @@ class ScrapperService
   def parse_address(address_raw)
     a = address_raw.css(".adresse.pj-lb.pj-link")
     a.at("span").children.remove unless a.at("span").nil? # we don't need this span's content
-    @agency[:address] = a.text.strip.gsub(/\n/," ")
+    @agency[:address] = a.text.strip.gsub(/\n/, ' ')
   end
 
   def parse_tags(tags_raw)
@@ -62,7 +62,7 @@ class ScrapperService
   end
 
   def parse_activities_raw(activities_raw)
-    @agency[:activities] = activities_raw.text.strip.gsub(/\n/," ")
+    @agency[:activities] = activities_raw.text.strip.gsub(/\n/, ' ')
   end
 
   def parse_keywords_raw(keywords_raw)
@@ -83,6 +83,7 @@ class ScrapperService
     else
       @agency[:website] = "NC"
     end
+    @agency[:website] = "Adresse irrécupérable" if %w[NC # javascript:].include?(@agency[:website])
   end
 
 end
